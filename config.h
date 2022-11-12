@@ -5,7 +5,7 @@
  *
  * font: see http://freedesktop.org/software/fontconfig/fontconfig-user.html
  */
-static char *font = "Courier Prime Code:pixelsize=12.5";
+static char *font = "Anonymous Pro:size=13:antialiasing=true";
 static int borderpx = 2;
 
 /*
