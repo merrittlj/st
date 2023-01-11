@@ -138,7 +138,7 @@ static const char *colorname[] = {
 */
 unsigned int defaultfg = 6;
 unsigned int defaultbg = 0;
-unsigned int defaultcs = 3;
+unsigned int defaultcs = 6;
 static unsigned int defaultrcs = 14;
 /*
  * Default shape of cursor
