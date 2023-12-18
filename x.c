@@ -77,17 +77,6 @@ typedef XftDraw *Draw;
 typedef XftColor Color;
 typedef XftGlyphFontSpec GlyphFontSpec;
 
-/* Purely graphic info */
-typedef struct {
-	int tw, th; /* tty width and height */
-	int w, h; /* window width and height */
-	int hborderpx, vborderpx;
-	int ch; /* char height */
-	int cw; /* char width  */
-	int mode; /* window state/mode flags */
-	int cursor; /* cursor style */
-} TermWindow;
-
 typedef struct {
 	Display *dpy;
 	Colormap cmap;
@@ -152,7 +141,6 @@ static void ximinstantiate(Display *, XPointer, XPointer);
 static void ximdestroy(XIM, XPointer, XPointer);
 static int xicdestroy(XIC, XPointer, XPointer);
 static void xinit(int, int);
-static void cresize(int, int);
 static void xresize(int, int);
 static void xhints(void);
 static int xloadcolor(int, const char *, Color *);
@@ -220,7 +208,7 @@ static void (*handler[LASTEvent])(XEvent *) = {
 static DC dc;
 static XWindow xw;
 static XSelection xsel;
-static TermWindow win;
+TermWindow win;
 
 /* Font Ring Cache */
 enum {
@@ -849,6 +837,12 @@ xsetcolorname(int x, const char *name)
 	return 0;
 }
 
+void
+updatecolorname(void)
+{
+    colorname = themes[theme_selection];
+}
+
 /*
  * Absolute coordinates.
  */
@@ -856,7 +850,7 @@ void
 xclear(int x1, int y1, int x2, int y2)
 {
 	XftDrawRect(xw.draw,
-			&dc.col[IS_SET(MODE_REVERSE)? defaultfg : defaultbg],
+			&dc.col[IS_SET(MODE_REVERSE)? defaultfg[theme_selection] : defaultbg[theme_selection]],
 			x1, y1, x2-x1, y2-y1);
 }
 
@@ -1164,8 +1158,8 @@ xinit(int cols, int rows)
 		xw.t += DisplayHeight(xw.dpy, xw.scr) - win.h - 2;
 
 	/* Events */
-	xw.attrs.background_pixel = dc.col[defaultbg].pixel;
-	xw.attrs.border_pixel = dc.col[defaultbg].pixel;
+	xw.attrs.background_pixel = dc.col[defaultbg[theme_selection]].pixel;
+	xw.attrs.border_pixel = dc.col[defaultbg[theme_selection]].pixel;
 	xw.attrs.bit_gravity = NorthWestGravity;
 	xw.attrs.event_mask = FocusChangeMask | KeyPressMask | KeyReleaseMask
 		| ExposureMask | VisibilityChangeMask | StructureNotifyMask
@@ -1185,7 +1179,7 @@ xinit(int cols, int rows)
 			&gcvalues);
 	xw.buf = XCreatePixmap(xw.dpy, xw.win, win.w, win.h,
 			DefaultDepth(xw.dpy, xw.scr));
-	XSetForeground(xw.dpy, dc.gc, dc.col[defaultbg].pixel);
+	XSetForeground(xw.dpy, dc.gc, dc.col[defaultbg[theme_selection]].pixel);
 	XFillRectangle(xw.dpy, xw.buf, dc.gc, 0, 0, win.w, win.h);
 
 	/* font spec buffer */
@@ -1417,8 +1411,8 @@ xdrawglyphfontspecs(const XftGlyphFontSpec *specs, Glyph base, int len, int x, i
 	}
 
 	if (IS_SET(MODE_REVERSE)) {
-		if (fg == &dc.col[defaultfg]) {
-			fg = &dc.col[defaultbg];
+		if (fg == &dc.col[defaultfg[theme_selection]]) {
+			fg = &dc.col[defaultbg[theme_selection]];
 		} else {
 			colfg.red = ~fg->color.red;
 			colfg.green = ~fg->color.green;
@@ -1429,8 +1423,8 @@ xdrawglyphfontspecs(const XftGlyphFontSpec *specs, Glyph base, int len, int x, i
 			fg = &revfg;
 		}
 
-		if (bg == &dc.col[defaultbg]) {
-			bg = &dc.col[defaultfg];
+		if (bg == &dc.col[defaultbg[theme_selection]]) {
+			bg = &dc.col[defaultfg[theme_selection]];
 		} else {
 			colbg.red = ~bg->color.red;
 			colbg.green = ~bg->color.green;
@@ -1536,21 +1530,21 @@ xdrawcursor(int cx, int cy, Glyph g, int ox, int oy, Glyph og)
 
 	if (IS_SET(MODE_REVERSE)) {
 		g.mode |= ATTR_REVERSE;
-		g.bg = defaultfg;
+		g.bg = defaultfg[theme_selection];
 		if (selected(cx, cy)) {
-			drawcol = dc.col[defaultcs];
+			drawcol = dc.col[defaultcs[theme_selection]];
 			g.fg = defaultrcs;
 		} else {
 			drawcol = dc.col[defaultrcs];
-			g.fg = defaultcs;
+			g.fg = defaultcs[theme_selection];
 		}
 	} else {
 		if (selected(cx, cy)) {
-			g.fg = defaultfg;
+			g.fg = defaultfg[theme_selection];
 			g.bg = defaultrcs;
 		} else {
-			g.fg = defaultbg;
-			g.bg = defaultcs;
+			g.fg = defaultbg[theme_selection];
+			g.bg = defaultcs[theme_selection];
 		}
 		drawcol = dc.col[g.bg];
 	}
@@ -1683,7 +1677,7 @@ xfinishdraw(void)
 			win.h, 0, 0);
 	XSetForeground(xw.dpy, dc.gc,
 			dc.col[IS_SET(MODE_REVERSE)?
-				defaultfg : defaultbg].pixel);
+				defaultfg[theme_selection] : defaultbg[theme_selection]].pixel);
 }
 
 void
@@ -2084,6 +2078,8 @@ run:
 
 	if (!opt_title)
 		opt_title = (opt_line || !opt_cmd) ? "st" : opt_cmd[0];
+
+    themeread(0);
 
 	setlocale(LC_CTYPE, "");
 	XSetLocaleModifiers("");

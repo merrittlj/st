@@ -5,7 +5,7 @@
  *
  * font: see http://freedesktop.org/software/fontconfig/fontconfig-user.html
  */
-static char *font = "Anonymous Pro:size=13:antialiasing=true";
+static char *font = "Proggy Vector Dotted:size=6:antialiasing=true";
 static int borderpx = 2;
 
 /*
@@ -93,52 +93,55 @@ char *termname = "st-256color";
  */
 unsigned int tabspaces = 8;
 /* Terminal colors (16 first used in escape sequence) */
-static const char *colorname[] = {
-    /*"#fbf1c7",
-    "#cc241d",
-    "#98971a",
-    "#d79921",
-    "#458588",
-    "#b16286",
-    "#689d6a",
-    "#7c6f64",
-    
-    "#928374",
-    "#9d0006",
-    "#79740e",
-    "#b57614",
-    "#076678",
-    "#8f3f71",
-    "#427b58",
-    "#3c3836",*/
-
-
-    "#bab5a1",
-    "#ce664d",
-    "#898776", //?: #dcd8c0/d1cdb7
-    "#877861",
-    "#898776", //?: #dcd8c0/d1cdb7
-    "#454138",
-    "#454138",
-    "#2a0d83",
-
-    "#7a766f",
-    "#ce664d",
-    "#7a766f",
-    "#877861",
-    "#454138",
-    "#ece2b1",
-    "#454137",
-    "#2a0d83",
+static const char *themes[2][16] = {
+    {  // Light theme.
+        "#000000",  // Foreground light.
+        "#a60000",
+        "#006800",
+        "#6f5500",
+        "#0031a9",
+        "#721045",
+        "#005e8b",
+        "#bfbfbf",
+        "#595959",
+        "#972500",
+        "#316500",
+        "#884900",
+        "#3548cf",
+        "#531ab6",
+        "#005f5f",
+        "#ffffff"  // Background light.
+    },
+    {  // Dark theme.
+        "#000000",  // Background dark.
+        "#ff5f59",
+        "#44bc44",
+        "#d0bc00",
+        "#2fafff",
+        "#feacd0",
+        "#00d3d0",
+        "#bfbfbf",
+        "#595959",
+        "#ff6b55",
+        "#70b900",
+        "#fec43f",
+        "#79a8ff",
+        "#b6a0ff",
+        "#6ae4b9",
+        "#ffffff"  // Foreground dark.
+    }
 };
+
+unsigned int theme_selection = 0;
+static const char **colorname;
 
 /*
 * Default colors (colorname index)
 * foreground, background, cursor
 */
-unsigned int defaultfg = 6;
-unsigned int defaultbg = 0;
-unsigned int defaultcs = 6;
+const unsigned int defaultfg[] = {0, 15};
+const unsigned int defaultbg[] = {15, 0};
+const unsigned int defaultcs[] = {0, 0};
 static unsigned int defaultrcs = 14;
 /*
  * Default shape of cursor
@@ -190,7 +193,7 @@ static MouseShortcut mshortcuts[] = {
 };
 
 /* Internal keyboard shortcuts. */
-#define MODKEY Mod1Mask
+#define MODKEY Mod4Mask
 #define TERMMOD (ControlMask|ShiftMask)
 
 static Shortcut shortcuts[] = {

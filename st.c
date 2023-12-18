@@ -711,6 +711,7 @@ execsh(char *cmd, char **args)
 	signal(SIGQUIT, SIG_DFL);
 	signal(SIGTERM, SIG_DFL);
 	signal(SIGALRM, SIG_DFL);
+    signal(SIGUSR1, themeread);
 
 	execvp(prog, args);
 	_exit(1);
@@ -936,6 +937,72 @@ write_error:
 }
 
 void
+themeread(int s)
+{
+    signal(SIGUSR1, themeread);
+    int i = 0;
+
+    char *raw_theme_path = getenv("THEME_PATH");
+    if (raw_theme_path == NULL) printf("null theme path\n");
+
+    char path_buffer[strlen(raw_theme_path) + 12];
+    strcpy(path_buffer, raw_theme_path);
+    strcat(path_buffer, "theme.value");
+
+    FILE *fp = fopen(path_buffer, "rb");
+    if (fp == NULL) printf("null file\n");
+
+    fseek(fp, 0, SEEK_END);
+    long fsize = ftell(fp);
+    fseek(fp, 0, SEEK_SET);  // Same as rewind(f);
+
+    char *data_buffer = malloc(fsize + 1);
+    fread(data_buffer, fsize, 1, fp);
+
+    theme_selection = atoi(data_buffer);
+    fclose(fp);
+
+    updatecolorname();
+
+    if (s != 0) {
+        xloadcols();
+        cresize(win.w, win.h);
+
+        term.c.attr.bg = defaultbg[theme_selection];
+        term.c.attr.fg = defaultfg[theme_selection];
+        tupdatebgcolor(defaultbg[(1 - theme_selection)], defaultbg[theme_selection]);
+        tupdatefgcolor(defaultfg[(1 - theme_selection)], defaultfg[theme_selection]);
+        
+        redraw();
+        ttywrite("\033[O", 3, 1);
+    }
+}
+
+void
+tupdatebgcolor(int oldbg, int newbg)
+{
+	for (int y = 0; y < term.row; y++) {
+		for (int x = 0; x < term.col; x++) {
+			if (term.line[y][x].bg == oldbg) {
+				term.line[y][x].bg = newbg;
+            }
+		}
+	}
+}
+
+void
+tupdatefgcolor(int oldfg, int newfg)
+{
+	for (int y = 0; y < term.row; y++) {
+		for (int x = 0; x < term.col; x++) {
+			if (term.line[y][x].fg == oldfg) {
+				term.line[y][x].fg = newfg;
+            }
+		}
+	}
+}
+
+void
 ttyresize(int tw, int th)
 {
 	struct winsize w;
@@ -1024,8 +1091,8 @@ treset(void)
 
 	term.c = (TCursor){{
 		.mode = ATTR_NULL,
-		.fg = defaultfg,
-		.bg = defaultbg
+		.fg = defaultfg[theme_selection],
+		.bg = defaultbg[theme_selection]
 	}, .x = 0, .y = 0, .state = CURSOR_DEFAULT};
 
 	memset(term.tabs, 0, term.col * sizeof(*term.tabs));
@@ -1048,7 +1115,7 @@ treset(void)
 void
 tnew(int col, int row)
 {
-	term = (Term){ .c = { .attr = { .fg = defaultfg, .bg = defaultbg } } };
+	term = (Term){ .c = { .attr = { .fg = defaultfg[theme_selection], .bg = defaultbg[theme_selection] } } };
 	tresize(col, row);
 	treset();
 }
@@ -1425,8 +1492,8 @@ tsetattr(const int *attr, int l)
 				ATTR_REVERSE    |
 				ATTR_INVISIBLE  |
 				ATTR_STRUCK     );
-			term.c.attr.fg = defaultfg;
-			term.c.attr.bg = defaultbg;
+			term.c.attr.fg = defaultfg[theme_selection];
+			term.c.attr.bg = defaultbg[theme_selection];
 			break;
 		case 1:
 			term.c.attr.mode |= ATTR_BOLD;
@@ -1480,14 +1547,14 @@ tsetattr(const int *attr, int l)
 				term.c.attr.fg = idx;
 			break;
 		case 39:
-			term.c.attr.fg = defaultfg;
+			term.c.attr.fg = defaultfg[theme_selection];
 			break;
 		case 48:
 			if ((idx = tdefcolor(attr, &i, l)) >= 0)
 				term.c.attr.bg = idx;
 			break;
 		case 49:
-			term.c.attr.bg = defaultbg;
+			term.c.attr.bg = defaultbg[theme_selection];
 			break;
 		default:
 			if (BETWEEN(attr[i], 30, 37)) {
@@ -1928,9 +1995,9 @@ strhandle(void)
 	char *p = NULL, *dec;
 	int j, narg, par;
 	const struct { int idx; char *str; } osc_table[] = {
-		{ defaultfg, "foreground" },
-		{ defaultbg, "background" },
-		{ defaultcs, "cursor" }
+		{ defaultfg[theme_selection], "foreground" },
+		{ defaultbg[theme_selection], "background" },
+		{ defaultcs[theme_selection], "cursor" }
 	};
 
 	term.esc &= ~(ESC_STR_END|ESC_STR);
@@ -2000,7 +2067,7 @@ strhandle(void)
 				        j, p ? p : "(null)");
 			} else {
 				/*
-				 * TODO if defaultbg color is changed, borders
+				 * TODO if defaultbg[theme_selection] color is changed, borders
 				 * are dirty
 				 */
 				tfulldirt();
