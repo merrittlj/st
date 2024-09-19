@@ -5,7 +5,8 @@
  *
  * font: see http://freedesktop.org/software/fontconfig/fontconfig-user.html
  */
-static char *font = "Proggy Vector Dotted:size=6:antialiasing=true";
+// Spleen !!!, Profont !!!, 3270 !!, Fairfax Hax HD !!, CamingoCode !, Hermit ! 
+static char *font = "ProFont:size=22:antialiasing=false";
 static int borderpx = 2;
 
 /*
